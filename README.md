@@ -14,9 +14,9 @@
 <br>
 
 **Legenda:**
-- AS: Autonomous System
-- VRF: Virtual Routing and Forwarding
-- PE: Provider Edge
-- CE: Customer Edge
-- RD: Route Distinguisher
-- RT: Route Target
+- **AS:** Autonomous System
+- **VRF:** Virtual Routing and Forwarding
+- **PE:** Provider Edge
+- **CE:** Customer Edge
+- **RD:** Route Distinguisher
+- **RT:** Route Target
