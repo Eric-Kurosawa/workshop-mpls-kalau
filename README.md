@@ -11,7 +11,9 @@
 5. Configuração do eBGP entre os CEs e os PEs (e RD nos PEs)
 6. Configuração do RT e L3VPN nos PEs
 
-**Legenda**
+<br>
+
+**Legenda:**
 - AS: Autonomous System
 - VRF: Virtual Routing and Forwarding
 - PE: Provider Edge
