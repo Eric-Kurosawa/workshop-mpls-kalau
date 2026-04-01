@@ -1,0 +1,280 @@
+Workshop MPLS
+
+1. Exclusão do processo OSPF de cada Roteador
+
+Todos os Roteadores:
+-  no router ospf 10
+
+---------------------------------------------------
+
+2. Configuração do OSPF e MPLS no núcleo da rede (AS65007)
+
+PE1:
+- mpls ldp router-id loopback 0
+- interface range ethernet 0/0 - 1
+- ip ospf network point-to-point
+- router ospf 10
+- mpls ldp autoconfig
+- network 2.2.2.2 0.0.0.0 area 0
+- network 10.11.0.1 0.0.0.0 area 0
+- network 10.21.0.1 0.0.0.0 area 0
+
+PE2:
+- mpls ldp router-id loopback 0
+- interface range ethernet 0/0 - 1
+- ip ospf network point-to-point
+- router ospf 10
+- mpls ldp autoconfig
+- network 4.4.4.4 0.0.0.0 area 0
+- network 10.12.0.1 0.0.0.0 area 0
+- network 10.22.0.1 0.0.0.0 area 0
+
+PE3:
+- mpls ldp router-id loopback 0
+- interface ethernet 0/2
+- ip ospf network point-to-point
+- router ospf 10
+- mpls ldp autoconfig
+- network 5.5.5.5 0.0.0.0 area 0
+- network 10.23.0.1 0.0.0.0 area 0
+
+P1:
+- mpls ldp router-id loopback 0
+- interface range ethernet 0/0 - 1
+- ip ospf network point-to-point
+- router ospf 10
+- mpls ldp autoconfig
+- network 1.1.1.1 0.0.0.0 area 0
+- network 10.11.0.2 0.0.0.0 area 0
+- network 10.12.0.2 0.0.0.0 area 0
+
+P2:
+- mpls ldp router-id loopback 0
+- interface range ethernet 0/0 - 2
+- ip ospf network point-to-point
+- router ospf 10
+- mpls ldp autoconfig
+- network 3.3.3.3 0.0.0.0 area 0
+- network 10.21.0.2 0.0.0.0 area 0
+- network 10.22.0.2 0.0.0.0 area 0
+- network 10.23.0.2 0.0.0.0 area 0
+
+Comandos para verificação:
+- show mpls ldp neighbor
+- show mpls forwarding-table
+
+---------------------------------------------------
+
+3. Configuração do VRF nos Roteadores PE1, PE2 e PE3
+
+PE1:
+- ip vrf MILES
+- ip vrf GWEN
+- ip vrf PETER
+- interface ethernet 0/2
+- ip vrf forwarding MILES
+- ip address 10.101.0.1 255.255.255.252
+- interface ethernet 1/0
+- ip vrf forwarding PETER
+- ip address 10.103.0.1 255.255.255.252
+- interface ethernet 1/1
+- ip vrf forwarding GWEN
+- ip address 10.104.0.1 255.255.255.252
+
+Comandos para verificação PE1:
+- ping 10.101.0.2
+- ping vrf MILES 10.101.0.2
+
+PE2:
+- ip vrf MILES
+- ip vrf PETER
+- interface ethernet 0/3
+- ip vrf forwarding MILES
+- ip address 10.108.0.1 255.255.255.252
+- interface ethernet 0/2
+- ip vrf forwarding PETER
+- ip address 10.109.0.1 255.255.255.252
+
+PE3:
+- ip vrf GWEN
+- interface ethernet 0/3
+- ip vrf forwarding GWEN
+- ip address 10.110.0.1 255.255.255.252
+
+Comandos para verificação:
+- show ip route vrf PETER
+- show ip route vrf MILES
+- show ip route vrf GWEN
+
+---------------------------------------------------
+
+4. Configuração do iBGP no CORE entre os PEs
+
+PE1:
+- router bgp 65007
+- bgp router-id 2.2.2.2
+- neighbor 4.4.4.4 remote-as 65007
+- neighbor 4.4.4.4 update-source Loopback0
+- neighbor 5.5.5.5 remote-as 65007
+- neighbor 5.5.5.5 update-source Loopback0
+
+PE2:
+- router bgp 65007
+- bgp router-id 4.4.4.4
+- neighbor 2.2.2.2 remote-as 65007
+- neighbor 2.2.2.2 update-source Loopback0
+
+PE3:
+- router bgp 65007
+- bgp router-id 5.5.5.5
+- neighbor 2.2.2.2 remote-as 65007
+- neighbor 2.2.2.2 update-source Loopback0
+
+Comando para verificação:
+- show ip bgp summary
+
+---------------------------------------------------
+
+5. Configuração do eBGP entre os CEs e os PEs (e RD - Route Distinguisher - nos PEs)
+
+CE-MILES-MORALES-01:
+- router bgp 65001
+- neighbor 10.101.0.1 remote-as 65007
+- neighbor 10.101.0.1 allowas-in 1
+- network 192.168.4.0
+
+CE-PETER-PARKER-01:
+- router bgp 65002
+- neighbor 10.103.0.1 remote-as 65007
+- neighbor 10.103.0.1 allowas-in 1
+- network 192.168.4.0
+
+CE-GWEN-STACY-01:
+- router bgp 65003
+- neighbor 10.104.0.1 remote-as 65007
+- neighbor 10.104.0.1 allowas-in 1
+- network 192.168.4.0
+
+PE1:
+- ip vrf MILES
+- rd 65001:1
+- ip vrf PETER
+- rd 65002:1
+- ip vrf GWEN
+- rd 65003:1
+
+- router bgp 65007
+- address-family ipv4 vrf MILES
+- neighbor 10.101.0.2 remote-as 65001
+- neighbor 10.101.0.2 activate
+- exit-address-family
+- address-family ipv4 vrf PETER
+- neighbor 10.103.0.2 remote-as 65002
+- neighbor 10.103.0.2 activate
+- exit-address-family
+- address-family ipv4 vrf GWEN
+- neighbor 10.104.0.2 remote-as 65003
+- neighbor 10.104.0.2 activate
+- exit-address-family
+
+CE-MILES-MORALES-02:
+- router bgp 65001
+- neighbor 10.108.0.1 remote-as 65007
+- neighbor 10.108.0.1 allowas-in 1
+- network 192.168.3.0
+
+CE-PETER-PARKER-02:
+- router bgp 65002
+- neighbor 10.109.0.1 remote-as 65007
+- neighbor 10.109.0.1 allowas-in 1
+- network 192.168.2.0
+
+CE-GWEN-STACY-02
+- router bgp 65003
+- neighbor 10.110.0.1 remote-as 65007
+- neighbor 10.110.0.1 allowas-in 1
+- network 192.168.6.0
+
+PE2:
+- ip vrf MILES
+- rd 65001:1
+- ip vrf PETER
+- rd 65002:1
+
+PE3:
+- ip vrf GWEN
+- rd 65003:1
+
+PE2:
+- router bgp 65007
+- address-family ipv4 vrf MILES
+- neighbor 10.108.0.2 remote-as 65001
+- neighbor 10.108.0.2 activate
+- exit-address-family
+- address-family ipv4 vrf PETER
+- neighbor 10.109.0.2 remote-as 65002
+- neighbor 10.109.0.2 activate
+- exit-address-family
+
+PE3:
+- router bgp 65007
+- address-family ipv4 vrf GWEN
+- neighbor 10.110.0.2 remote-as 65003
+- neighbor 10.110.0.2 activate
+- exit-address-family
+
+Comandos para verificação:
+- show ip bgp vpnv4 all summary
+- show ip route vrf PETER
+
+---------------------------------------------------
+
+6. Configuração do RT - Route Target - e L3VPN nos PEs
+
+PE1:
+- ip vrf MILES
+- route-target export 65001:100
+- route-target import 65001:100
+- ip vrf PETER
+- route-target export 65002:100
+- route-target import 65002:100
+- ip vrf GWEN
+- route-target export 65003:100
+- route-target import 65003:100
+- router bgp 65007
+- address-family vpnv4
+- neighbor 4.4.4.4 activate
+- neighbor 4.4.4.4 send-community extended
+- neighbor 5.5.5.5 activate
+- neighbor 5.5.5.5 send-community extended
+- exit-address-family
+
+PE2:
+- ip vrf MILES
+- route-target export 65001:100
+- route-target import 65001:100
+- ip vrf PETER
+- route-target export 65002:100
+- route-target import 65002:100
+- router bgp 65007
+- address-family vpnv4
+- neighbor 2.2.2.2 activate
+- neighbor 2.2.2.2 send-community extended
+- exit-address-family
+
+Comando para verificação PE2:
+- show ip bgp vpnv4 all labels
+
+PE3:
+- ip vrf GWEN
+- route-target export 65003:100
+- route-target import 65003:100
+- router bgp 65007
+- address-family vpnv4
+- neighbor 2.2.2.2 activate
+- neighbor 2.2.2.2 send-community extended
+- exit-address-family
+
+Comandos para verificação PE3:
+- show ip route vrf GWEN
+- show ip bgp vpnv4 all labels
